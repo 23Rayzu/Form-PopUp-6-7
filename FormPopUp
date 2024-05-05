@@ -1,0 +1,137 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using AxMapWinGIS;
+using MapWinGIS;
+
+namespace PGD_6_7
+{
+    public partial class FormPopUp : Form
+    {
+        formMainWindow formMainWindowObject;
+
+        public FormPopUp(formMainWindow formMainWindowInitialized)
+        {
+            InitializeComponent();
+            formMainWindowObject = formMainWindowInitialized;
+        }
+
+        private void cmdEdit_Click(object sender, EventArgs e)
+        {
+            if (cmdEdit.Text == "Edit")
+            {
+                string input = Microsoft.VisualBasic.Interaction.InputBox(
+                    " Please enter your password...", "Password", "", -1, -1);
+                if (input == "123")
+                {
+                    cboTingkatAdmin.Enabled = true;
+                    txtNamaAset.ReadOnly = false;
+                    cmdBrowse.Enabled = true;
+                    cmdDelete.Visible = true;
+                    cmdEdit.Text = "Save";
+                }
+                else
+                {
+                    cboTingkatAdmin.Enabled = false;
+                    txtNamaAset.ReadOnly = true;
+                    cmdBrowse.Enabled = false;
+                    cmdDelete.Visible = false;
+                    cmdEdit.Text = "Edit";
+                    MessageBox.Show("Password salah!");
+                }
+            }
+
+            else if (cmdEdit.Text == "Save")
+            {
+                Shapefile sf = formMainWindowObject.axMap1.get_Shapefile(formMainWindowObject.handleNamaAset);
+
+                sf.StartEditingTable();
+                sf.EditCellValue(sf.Table.get_FieldIndexByName("tingkat_administrasi"),
+                    Convert.ToInt32(txtShapeIndex.Text), cboTingkatAdmin.Text);
+                sf.EditCellValue(sf.Table.get_FieldIndexByName("pemerintahan"),
+                    Convert.ToInt32(txtShapeIndex.Text), txtNamaAset.Text);
+                sf.EditCellValue(sf.Table.get_FieldIndexByName("foto"),
+                    Convert.ToInt32(txtShapeIndex.Text), txtFoto.Text);
+                sf.StopEditingTable();
+                sf.Save();
+
+                cmdEdit.Text = "Edit";
+                cboTingkatAdmin.Enabled = false;
+                txtNamaAset.ReadOnly = true;
+                cmdBrowse.Enabled = false;
+                formMainWindowObject.axMap1.Redraw2(tkRedrawType.RedrawAll);
+                formMainWindowObject.axMap1.Refresh();
+                this.Hide();
+                MessageBox.Show("Data Sudah Tersimpan");
+            }
+        }
+
+        private void cmdBrowse_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.InitialDirectory = @"D:\";
+            ofd.Filter = "JPG (.jpg)|.jpg|JPEG (.jpeg)|.jpeg|PNG (.png)|.png|All files (.)|.";
+            ofd.FilterIndex = 1;
+            ofd.RestoreDirectory = true;
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                string fileName = @Path.GetFileName(ofd.FileName);
+                string sourcePath = @Path.GetDirectoryName(ofd.FileName);
+                string targetPath = @Path.Combine(formMainWindow.strFilePath, @"D:\SIG MUKHLISH\Semester 2\Prak PGD\acara 6 dan 7\Resources\Non - Spatial");
+                string sourceFile = @Path.Combine(sourcePath, fileName);
+                string destFile = @Path.Combine(targetPath, fileName);
+                File.Copy(sourceFile, destFile, true);
+                txtFoto.Text = fileName;
+                pictureBox1.ImageLocation = destFile;
+            }
+            else
+            {
+                MessageBox.Show("SILAHKAN PILIH FOTO!!!", "Report", MessageBoxButtons.OK);
+            }
+        }
+
+        private void cmdDelete_Click(object sender, EventArgs e)
+        {
+            Shapefile sf = formMainWindowObject.axMap1.get_Shapefile(formMainWindowObject.handleNamaAset);
+            sf.StartEditingShapes();
+            if (sf.EditDeleteShape(Convert.ToInt32(txtShapeIndex.Text)))
+            {
+                MessageBox.Show("Data Gagal Dihapus !. Error: " + sf.ErrorMsg[sf.LastErrorCode]);
+            }
+            else
+            {
+                MessageBox.Show("Data Berhasil Dihapus. Index = " + Convert.ToInt32(txtShapeIndex.Text));
+                formMainWindowObject.axMap1.Redraw2(tkRedrawType.RedrawAll);
+                formMainWindowObject.axMap1.Refresh();
+            }
+            sf.Save();
+            sf.StopEditingShapes();
+        }
+
+        private void cmdCancel_Click(object sender, EventArgs e)
+        {
+            this.Hide();
+            Shapefile sf = formMainWindowObject.axMap1.get_Shapefile(formMainWindowObject.handleNamaAset);
+            sf.SelectNone();
+        }
+        private void PopUp_FormClosing_1(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            this.Hide();
+            Shapefile sf = formMainWindowObject.axMap1.get_Shapefile(formMainWindowObject.handleNamaAset);
+            sf.SelectNone();
+        }
+
+        private void FormPopUp_Load(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
